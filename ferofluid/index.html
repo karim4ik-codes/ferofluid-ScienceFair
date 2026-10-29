@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>html,body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Ferrofluid Lab</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@600;800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one-column lab notebook — live simulator first, then short explainer sections and a quiz. Single deliberate dark "lab at night" look. */
+:root{
+  --ink:#0d1117;        /* page ground: oiled black */
+  --panel:#161d27;      /* raised surfaces */
+  --line:#2a3544;
+  --fg:#e8edf3;
+  --muted:#9fb0c3;
+  --steel:#7cc4ff;      /* field lines, info */
+  --north:#ff7a45;      /* magnet north / accent */
+  --south:#4f8dff;
+  --good:#5fd39a; --bad:#ff8a8a;
+  --display:"Syne", "Trebuchet MS", sans-serif;
+  --body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--ink);color:var(--fg);font-family:var(--body);font-size:17px;line-height:1.55;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:980px;margin:0 auto;padding-block:32px 64px;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.05}
+h1{font-size:clamp(44px,9vw,92px);font-weight:800;letter-spacing:-.02em}
+h2{font-size:clamp(28px,4.5vw,40px);font-weight:800}
+h3{font-size:20px;font-weight:600}
+p{margin:0;max-width:65ch}
+.eyebrow{font-family:var(--mono);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--steel)}
+header{display:flex;flex-direction:column;gap:14px}
+header p{color:var(--muted);font-size:19px}
+section{display:flex;flex-direction:column;gap:20px}
+
+/* simulator */
+.lab{background:var(--panel);border:1px solid var(--line);border-radius:18px;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}
+.stage{position:relative;min-width:0;background:radial-gradient(ellipse at 50% 65%,#f4f7fb 0%,#d6dee8 75%)}
+canvas{display:block;width:100%;height:auto;aspect-ratio:4/3;max-width:100%}
+.controls{padding:24px;display:flex;flex-direction:column;gap:22px;border-left:1px solid var(--line);min-width:0}
+.ctl{display:flex;flex-direction:column;gap:8px}
+.ctl label{font-weight:700;display:flex;justify-content:space-between;gap:8px}
+.ctl output{font-family:var(--mono);color:var(--steel);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--north);height:28px}
+.btn{font:inherit;font-weight:700;border-radius:10px;border:1px solid var(--line);background:#202a37;color:var(--fg);padding:12px 16px;cursor:pointer;min-height:44px}
+.btn:hover{border-color:var(--steel)}
+.btn:focus-visible,input:focus-visible{outline:3px solid var(--steel);outline-offset:2px}
+.btn.primary{background:var(--north);border-color:var(--north);color:#1a0d06}
+.readout{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.readout div{background:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:2px}
+.readout b{font-family:var(--mono);font-size:22px;font-variant-numeric:tabular-nums}
+.readout span{font-size:12px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.note{font-size:14px;color:var(--muted)}
+.state{font-family:var(--mono);font-size:13px;color:var(--steel);min-height:1.5em}
+
+/* recipe / forces */
+.three{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.ing{border-top:2px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:6px}
+.ing .pct{font-family:var(--mono);color:var(--north);font-size:28px;font-variant-numeric:tabular-nums}
+.forces{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.force{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;display:flex;flex-direction:column;gap:6px}
+.force .dir{font-family:var(--mono);font-size:14px}
+.up{color:var(--north)} .down{color:var(--south)}
+
+/* timeline */
+.time{display:flex;flex-direction:column;gap:0;border-left:2px solid var(--line);margin-left:6px}
+.time div{padding:0 0 18px 20px;position:relative;display:flex;flex-direction:column;gap:2px}
+.time div::before{content:"";position:absolute;left:-7px;top:6px;width:12px;height:12px;border-radius:50%;background:var(--north)}
+.time b{font-family:var(--mono);color:var(--steel)}
+
+.uses{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.use{display:flex;flex-direction:column;gap:6px}
+.use h3{font-size:18px}
+
+/* quiz */
+.quiz{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:16px}
+.qhead{display:flex;justify-content:space-between;gap:12px;font-family:var(--mono);font-size:14px;color:var(--muted)}
+.qtext{font-size:21px;font-weight:700}
+.opts{display:grid;gap:10px}
+.opt{text-align:left;font:inherit;padding:14px 16px;border-radius:12px;border:1px solid var(--line);background:var(--ink);color:var(--fg);cursor:pointer;min-height:48px}
+.opt:hover:not(:disabled){border-color:var(--steel)}
+.opt:focus-visible{outline:3px solid var(--steel);outline-offset:2px}
+.opt.right{border-color:var(--good);background:#10261c}
+.opt.wrong{border-color:var(--bad);background:#2a1414}
+.opt:disabled{cursor:default}
+.feedback{min-height:1.6em}
+.feedback.ok{color:var(--good)} .feedback.no{color:var(--bad)}
+
+.facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.fact{border-top:2px solid var(--north);padding-top:12px}
+footer{color:var(--muted);font-size:14px;border-top:1px solid var(--line);padding-top:20px}
+
+@media (max-width:760px){
+  .lab{grid-template-columns:1fr}
+  .controls{border-left:0;border-top:1px solid var(--line)}
+  .three,.forces,.facts{grid-template-columns:1fr}
+  .uses{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Science Fair · Winter 2026</div>
+    <h1>Ferrofluid Lab</h1>
+    <div style="font-family:var(--display);font-weight:600;font-size:clamp(20px,3vw,26px);color:var(--north)">Our team: Karim, Abylaikhan, Danel, Khadidja</div>
+    <p>A liquid that turns into a spiky hedgehog when a magnet comes close. Move the magnet below and watch it happen.</p>
+  </header>
+
+  <section aria-labelledby="sim-h">
+    <h2 id="sim-h" class="eyebrow" style="font-family:var(--mono);font-size:13px;font-weight:500">Live simulator</h2>
+    <div class="lab">
+      <div class="stage"><canvas id="cv" width="800" height="600" aria-label="Ferrofluid in a dish above a magnet. Spikes change with the controls."></canvas></div>
+      <div class="controls">
+        <div class="ctl">
+          <label for="dist">Magnet distance <output id="distOut">3.0 cm</output></label>
+          <input type="range" id="dist" min="1" max="6" step="0.1" value="3">
+        </div>
+        <div class="ctl">
+          <label for="temp">Temperature <output id="tempOut">20 °C</output></label>
+          <input type="range" id="temp" min="20" max="200" step="1" value="20">
+        </div>
+        <button class="btn primary" id="toggle" type="button">Remove magnet</button>
+        <div class="readout" aria-live="polite">
+          <div><b id="rField">0%</b><span>Field</span></div>
+          <div><b id="rCount">0</b><span>Spikes</span></div>
+          <div><b id="rHeight">0</b><span>Height mm</span></div>
+        </div>
+        <div class="state" id="state"></div>
+        <p class="note">This is a simplified model for learning. Your real experiment will give different numbers, and those real numbers are what counts.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="in-h">
+    <h2 id="in-h">What is inside?</h2>
+    <p>Ferrofluid is a mix of three things. Typical amounts by volume:</p>
+    <div class="three">
+      <div class="ing"><div class="pct">≈5%</div><h3>Magnetic nanoparticles</h3><p>Magnetite (Fe₃O₄), about 10 nm wide. 10,000 of them in a row would be about as wide as a hair.</p></div>
+      <div class="ing"><div class="pct">≈10%</div><h3>Surfactant coat</h3><p>A soapy layer around each particle so they don't clump together into big lumps.</p></div>
+      <div class="ing"><div class="pct">≈85%</div><h3>Carrier liquid</h3><p>Usually an oil. The particles float in it thanks to Brownian motion and never sink.</p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="why-h">
+    <h2 id="why-h">Why do spikes appear?</h2>
+    <p>The particles line up along the magnetic field lines and pull the liquid upward. Other forces pull it back. The spikes are the shape where these forces balance. Scientists call it the <em>Rosensweig instability</em>.</p>
+    <div class="forces">
+      <div class="force"><div class="dir up">↑ pulls up</div><h3>Magnetic force</h3><p>Stronger when the magnet is closer.</p></div>
+      <div class="force"><div class="dir down">↓ pulls down</div><h3>Gravity and surface tension</h3><p>They try to keep the liquid flat and smooth.</p></div>
+    </div>
+    <p>Take the magnet away and the liquid becomes flat again at once. It is <em>superparamagnetic</em>: magnetic only while a magnet is near.</p>
+  </section>
+
+  <section aria-labelledby="hist-h">
+    <h2 id="hist-h">From rockets to speakers</h2>
+    <div class="time">
+      <div><b>1963</b><span>Steve Papell, an engineer at NASA, invents ferrofluid to move rocket fuel in zero gravity.</span></div>
+      <div><b>1960s–70s</b><span>Ronald Rosensweig studies it and explains the spike patterns.</span></div>
+      <div><b>Today</b><span>It works inside loudspeakers, machines and computer parts, and doctors study magnetic nanoparticles for medicine.</span></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="use-h">
+    <h2 id="use-h">Where is it used?</h2>
+    <div class="uses">
+      <div class="use"><h3>Loudspeakers</h3><p>Cools the coil and makes the sound cleaner.</p></div>
+      <div class="use"><h3>Machines</h3><p>Forms liquid seals that keep dust out.</p></div>
+      <div class="use"><h3>Medicine</h3><p>Research on carrying medicine to one exact spot.</p></div>
+      <div class="use"><h3>Art</h3><p>Moving sculptures controlled by magnets.</p></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="quiz-h">
+    <h2 id="quiz-h">Test yourself</h2>
+    <div class="quiz" id="quiz">
+      <div class="qhead"><span id="qNum">Question 1 of 5</span><span id="qScore">Score 0</span></div>
+      <div class="qtext" id="qText"></div>
+      <div class="opts" id="qOpts"></div>
+      <div class="feedback" id="qFb" aria-live="polite"></div>
+      <div><button class="btn" id="qNext" type="button" hidden>Next question</button></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="fact-h">
+    <h2 id="fact-h">Fun facts</h2>
+    <div class="facts">
+      <div class="fact"><p><strong>Space origin.</strong> It was invented for rockets, not for science fairs.</p></div>
+      <div class="fact"><p><strong>Too hot to be magnetic.</strong> Heat it enough and it loses its magnetism. Try the temperature slider above.</p></div>
+      <div class="fact"><p><strong>It can climb.</strong> Put a magnet under a metal bolt and the liquid crawls up it like a spiral.</p></div>
+      <div class="fact"><p><strong>Very messy.</strong> It stains almost everything, so scientists keep it in sealed glass.</p></div>
+    </div>
+  </section>
+
+  <footer>Made by our team for the Winter 2026 Science Fair. Safety: never touch ferrofluid with bare hands and keep strong magnets away from phones.</footer>
+</div>
+
+<script>
+(function(){
+  var cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+  var W=cv.width, H=cv.height;
+  var dist=document.getElementById('dist'), temp=document.getElementById('temp'), tog=document.getElementById('toggle');
+  var reduce=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var magnetOn=true, cur={h:0,n:0}, t=0;
+  var CURIE=160;
+
+  function model(){
+    var d=parseFloat(dist.value), T=parseFloat(temp.value);
+    var heat=Math.max(0,1-Math.max(0,T-20)/(CURIE-20));   // magnetism fades toward the Curie point
+    var field=magnetOn? Math.min(1,1/(d*d)*1.0) : 0;       // inverse-square style falloff, 1 cm = 100%
+    var eff=field*heat;
+    var n= eff<0.03?0: Math.round(4+eff*13);
+    var hmm= eff<0.03?0: (2+eff*16);
+    return {d:d,T:T,field:field,eff:eff,n:n,hmm:hmm};
+  }
+
+  function draw(m){
+    ctx.clearRect(0,0,W,H);
+    var cx=W/2, baseY=410, dishW=560;
+    // field lines
+    if(magnetOn&&m.eff>0.02){
+      ctx.strokeStyle='rgba(37,99,235,'+(0.12+m.field*0.3)+')';ctx.lineWidth=2;
+      for(var k=-4;k<=4;k++){ctx.beginPath();ctx.moveTo(cx+k*14,560);ctx.quadraticCurveTo(cx+k*60,430,cx+k*95,150);ctx.stroke();}
+    }
+    // dish
+    ctx.fillStyle='#bcc8d6';ctx.beginPath();ctx.ellipse(cx,baseY+16,dishW/2+20,34,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#7d8da1';ctx.lineWidth=2;ctx.stroke();
+    // puddle
+    ctx.fillStyle='#050608';ctx.beginPath();ctx.ellipse(cx,baseY+8,dishW/2-30,22,0,0,Math.PI*2);ctx.fill();
+    // spikes
+    var n=Math.max(0,Math.round(cur.n)), hPx=cur.h*14;
+    if(n>0&&hPx>2){
+      var span=Math.min(dishW-120, 60+n*30), left=cx-span/2, step=span/n;
+      ctx.beginPath();ctx.moveTo(left-30,baseY+8);
+      for(var i=0;i<n;i++){
+        var x0=left+i*step, xt=x0+step/2, x1=x0+step;
+        var u=(xt-cx)/(span/2); var w=Math.exp(-u*u*1.6);
+        var wob=reduce?0:Math.sin(t*2+i)*2;
+        var tip=baseY - (hPx*(0.45+0.55*w)) + wob;
+        ctx.quadraticCurveTo(x0+step*0.42,baseY-hPx*0.08*w,xt,tip);
+        ctx.quadraticCurveTo(x1-step*0.42,baseY-hPx*0.08*w,x1,baseY-hPx*0.06*w);
+      }
+      ctx.lineTo(left+span+30,baseY+8);ctx.closePath();
+      ctx.fillStyle='#050608';ctx.fill();
+      // gloss
+      ctx.strokeStyle='rgba(255,255,255,0.18)';ctx.lineWidth=2;
+      for(var j=0;j<n;j+=2){var xg=left+j*step+step*0.38;ctx.beginPath();ctx.moveTo(xg,baseY-hPx*0.25);ctx.lineTo(xg+step*0.08,baseY-hPx*0.55);ctx.stroke();}
+    }
+    // magnet
+    if(magnetOn){
+      var my=470+ (m.d-1)*20, mw=180, mh=50;
+      ctx.fillStyle='#ff7a45';ctx.fillRect(cx-mw/2,my,mw/2,mh);
+      ctx.fillStyle='#4f8dff';ctx.fillRect(cx,my,mw/2,mh);
+      ctx.fillStyle='#0d1117';ctx.font='700 26px "Atkinson Hyperlegible", sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('N',cx-mw/4,my+mh/2);ctx.fillText('S',cx+mw/4,my+mh/2);
+    }
+    // thermometer hint
+    if(m.T>20){ctx.fillStyle='rgba(255,122,69,'+Math.min(0.5,(m.T-20)/300)+')';ctx.fillRect(0,H-10,W*(m.T-20)/180,10);}
+  }
+
+  function readouts(m){
+    document.getElementById('distOut').textContent=m.d.toFixed(1)+' cm';
+    document.getElementById('tempOut').textContent=Math.round(m.T)+' °C';
+    document.getElementById('rField').textContent=Math.round(m.field*100)+'%';
+    document.getElementById('rCount').textContent=m.n;
+    document.getElementById('rHeight').textContent=m.hmm.toFixed(1);
+    var s='';
+    if(!magnetOn) s='No magnet: just a normal black liquid.';
+    else if(m.T>=CURIE) s='Too hot! Past the Curie point it is no longer magnetic.';
+    else if(m.eff<0.03) s='Field too weak to make spikes. Move the magnet closer.';
+    else if(m.d<=1.5) s='Very strong field: tall, packed spikes.';
+    else s='Spikes appear. Move closer to make them taller.';
+    document.getElementById('state').textContent=s;
+  }
+
+  function loop(){
+    var m=model();
+    var k=reduce?1:0.08;
+    cur.h+=(m.hmm-cur.h)*k; cur.n+=(m.n-cur.n)*(reduce?1:0.15);
+    t+=0.03; draw(m);
+    requestAnimationFrame(loop);
+  }
+  function update(){readouts(model());}
+  dist.addEventListener('input',update); temp.addEventListener('input',update);
+  tog.addEventListener('click',function(){magnetOn=!magnetOn;tog.textContent=magnetOn?'Remove magnet':'Bring magnet back';update();});
+  var m0=model(); cur.h=m0.hmm; cur.n=m0.n; update(); loop();
+
+  // quiz
+  var Q=[
+    {q:'Who invented ferrofluid?',o:['A Kazakh chemist in 1990','A NASA engineer in 1963','Isaac Newton','A loudspeaker company'],a:1,e:'Steve Papell invented it at NASA in 1963 to move rocket fuel in zero gravity.'},
+    {q:'Why don’t the tiny particles sink to the bottom?',o:['They are lighter than air','Brownian motion keeps pushing them around','The oil is frozen','They are glued to the dish'],a:1,e:'The particles are only about 10 nm wide, so molecules of the liquid keep bumping them and they stay floating.'},
+    {q:'What is the surfactant for?',o:['To make it shiny','To make it smell nice','To stop the particles clumping together','To make it magnetic'],a:2,e:'It coats every particle like a soapy jacket so they never stick together into lumps.'},
+    {q:'What happens when you take the magnet away?',o:['It stays spiky forever','It becomes a solid','It becomes a normal flat liquid again','It explodes'],a:2,e:'Ferrofluid is superparamagnetic: magnetic only while a magnet is near.'},
+    {q:'What happens if you heat ferrofluid a lot?',o:['It gets more magnetic','It loses its magnetism','It turns blue','Nothing at all'],a:1,e:'Above a certain temperature (linked to the Curie temperature) it stops reacting to the magnet.'}
+  ];
+  var qi=0, score=0;
+  var qNum=document.getElementById('qNum'),qScore=document.getElementById('qScore'),qText=document.getElementById('qText'),qOpts=document.getElementById('qOpts'),qFb=document.getElementById('qFb'),qNext=document.getElementById('qNext');
+  function showQ(){
+    var it=Q[qi]; qNum.textContent='Question '+(qi+1)+' of '+Q.length; qText.textContent=it.q;
+    qOpts.innerHTML=''; qFb.textContent=''; qFb.className='feedback'; qNext.hidden=true;
+    it.o.forEach(function(txt,idx){
+      var b=document.createElement('button'); b.type='button'; b.className='opt'; b.textContent=txt;
+      b.addEventListener('click',function(){
+        var all=qOpts.querySelectorAll('.opt'); all.forEach(function(x){x.disabled=true;});
+        all[it.a].classList.add('right');
+        if(idx===it.a){score++;qFb.textContent='Correct! '+it.e;qFb.className='feedback ok';}
+        else{b.classList.add('wrong');qFb.textContent='Not quite. '+it.e;qFb.className='feedback no';}
+        qScore.textContent='Score '+score;
+        qNext.textContent= qi<Q.length-1?'Next question':'See my result'; qNext.hidden=false; qNext.focus();
+      });
+      qOpts.appendChild(b);
+    });
+  }
+  var finished=false;
+  qNext.addEventListener('click',function(){
+    if(finished){finished=false;qi=0;score=0;qScore.textContent='Score 0';showQ();return;}
+    if(qi<Q.length-1){qi++;showQ();return;}
+    finished=true;
+    qText.textContent='You scored '+score+' out of '+Q.length+'. '+(score===Q.length?'Perfect, you are ready for the judges!':'Read the sections above and try again.');
+    qOpts.innerHTML='';qFb.textContent='';qNum.textContent='Finished';
+    qNext.textContent='Try again';
+  });
+  showQ();
+})();
+</script>
+
+</body>
+</html>
